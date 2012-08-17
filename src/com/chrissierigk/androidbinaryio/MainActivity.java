@@ -513,6 +513,9 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 		}
     	
 		private int loadTexture() {
+			android.graphics.Matrix flip = new android.graphics.Matrix();
+		    flip.postScale(1f, -1f);
+			
 			final int[] textureHandle = new int[1];
 			
 			GLES20.glGenTextures(1, textureHandle, 0);
@@ -521,7 +524,9 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 				final BitmapFactory.Options options = new BitmapFactory.Options();
 				options.inScaled = false;
 				
-				final Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.raw.boy_10, options);
+				Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.raw.boy_10, options);
+				bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), flip, true);
+				
 				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0]);
 				
 				GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
