@@ -24,6 +24,7 @@ import android.view.View;
 import android.view.View.OnTouchListener;
 
 import com.chrissierigk.androidbinaryio.Mesh.FloatData.Normal;
+import com.chrissierigk.androidbinaryio.Mesh.FloatData.TexCoord;
 import com.chrissierigk.androidbinaryio.Mesh.FloatData.Vertex;
 import com.chrissierigk.androidbinaryio.Mesh.TriangleData;
 
@@ -34,8 +35,10 @@ public class MainActivity extends Activity {
 	private FloatBuffer vertexBuffer;
 	private FloatBuffer normalBuffer;
 	private FloatBuffer newNormalBuffer;
+	private FloatBuffer textureCoordBuffer;
 	private ShortBuffer vertexIndiceBuffer;
 	private ShortBuffer normalIndiceBuffer;
+	private ShortBuffer textureIndiceBuffer;
 	private float mPreviousX = 0;
 	private float mPreviousY = 0;
 	private GLRenderer mRenderer;
@@ -114,7 +117,26 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 			
 			normalBuffer.position(0);
 			mesh.getFloatData().setNormalBuffer(normalBuffer);
-						
+			
+			int textureCoordCount = readInt(input);
+			ByteBuffer bb3 = ByteBuffer.allocateDirect(textureCoordCount * 2 * 4);
+			bb3.order(ByteOrder.nativeOrder());
+			textureCoordBuffer = bb3.asFloatBuffer();
+			
+			Log.d("MainTest", "TexCoord Count: " + textureCoordCount);
+			
+			for (int i = 0; i < textureCoordCount; i++) {
+				TexCoord texCoord = new TexCoord();
+				texCoord.setU(readFloat(input));
+				Log.d("MainTest", "U: " + texCoord.getU());
+				texCoord.setV(readFloat(input));
+				Log.d("MainTest", "V: " + texCoord.getV());
+				textureCoordBuffer.put(texCoord.toArray());
+			}
+			
+			textureCoordBuffer.position(0);
+			mesh.getFloatData().setTextureCoordBuffer(textureCoordBuffer);
+			
 			for (int triangleGroups = 0; triangleGroups < mesh.getGeometryHeader().getNoOfTriangleGroups(); triangleGroups++) {
 			
 				int length = readInt(input);
@@ -129,22 +151,32 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 				nBuffer.order(ByteOrder.nativeOrder());
 				normalIndiceBuffer = nBuffer.asShortBuffer();
 				
-				for (int i = 0; i < length * 6; i += 6) {					
+				ByteBuffer tBuffer = ByteBuffer.allocateDirect(length * 3 * 2);
+				tBuffer.order(ByteOrder.nativeOrder());
+				textureIndiceBuffer = tBuffer.asShortBuffer();
+				
+				for (int i = 0; i < length * 9; i += 9) {					
 					vertexIndiceBuffer.put(readShort(input));
 					vertexIndiceBuffer.put(readShort(input));
 					vertexIndiceBuffer.put(readShort(input));
 				
 					normalIndiceBuffer.put(readShort(input));
 					normalIndiceBuffer.put(readShort(input));
-					normalIndiceBuffer.put(readShort(input));					
+					normalIndiceBuffer.put(readShort(input));
+					
+					textureIndiceBuffer.put(readShort(input));
+					textureIndiceBuffer.put(readShort(input));
+					textureIndiceBuffer.put(readShort(input));
 				}
 				
 				vertexIndiceBuffer.position(0);
 				normalIndiceBuffer.position(0);
+				textureIndiceBuffer.position(0);
 				
 				TriangleData triangleData = new TriangleData();
 				triangleData.setVertexIndiceBuffer(vertexIndiceBuffer);
 				triangleData.setNormalIndiceBuffer(normalIndiceBuffer);
+				triangleData.setTextureIndiceBuffer(textureIndiceBuffer);
 				mesh.getTriangleData().add(triangleData);
 			}
 			

@@ -143,6 +143,7 @@ public class Mesh {
 
 		private FloatBuffer mVertexBuffer;
 		private FloatBuffer mNormalBuffer;
+		private FloatBuffer mTextureCoordBuffer;
 		
 		public FloatBuffer getVertexBuffer() {
 			return mVertexBuffer;
@@ -158,6 +159,14 @@ public class Mesh {
 
 		public void setNormalBuffer(FloatBuffer normalBuffer) {
 			mNormalBuffer = normalBuffer;
+		}
+		
+		public FloatBuffer getTextureCoordBuffer() {
+			return mTextureCoordBuffer;
+		}
+		
+		public void setTextureCoordBuffer(FloatBuffer textureCoordBuffer) {
+			mTextureCoordBuffer = textureCoordBuffer;
 		}
 		
 		public static class Vertex {
@@ -265,12 +274,38 @@ public class Mesh {
 				return sb.toString();
 			}
 		}
+		
+		public static class TexCoord {
+			private float mU;
+			private float mV;
+			
+			public float getU() {
+				return mU;
+			}
+			
+			public void setU(float mU) {
+				this.mU = mU;
+			}
+			
+			public float getV() {
+				return mV;
+			}
+			
+			public void setV(float mV) {
+				this.mV = mV;
+			}
+			
+			public float[] toArray() {
+				return new float[] {mU, mV};
+			}
+		}
 	}
 	
 	public static class TriangleData {
 		
 		private ShortBuffer mVertexIndiceBuffer;
 		private ShortBuffer mNormalIndiceBuffer;
+		private ShortBuffer mTextureIndiceBuffer;
 		
 		public ShortBuffer getVertexIndiceBuffer() {
 			return mVertexIndiceBuffer;
@@ -286,6 +321,14 @@ public class Mesh {
 		
 		public void setNormalIndiceBuffer(ShortBuffer normalIndiceBuffer) {
 			mNormalIndiceBuffer = normalIndiceBuffer;
+		}
+		
+		public ShortBuffer getTextureIndiceBuffer() {
+			return mTextureIndiceBuffer;
+		}
+		
+		public void setTextureIndiceBuffer(ShortBuffer textureIndiceBuffer) {
+			mTextureIndiceBuffer = textureIndiceBuffer;
 		}
 	}
 }
