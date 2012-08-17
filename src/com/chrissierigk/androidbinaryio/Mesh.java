@@ -344,18 +344,18 @@ public class Mesh {
 	
 	public static class TriangleData {
 		
-		private ShortBuffer mVertexBuffer;
+		private ShortBuffer mIndexBuffer;
 		
 		private short[] mPositionIndices;
 		private short[] mNormalIndices;
 		private short[] mTextureIndices;
 		
-		public ShortBuffer getVertexBuffer() {
-			return mVertexBuffer;
+		public ShortBuffer getIndexBuffer() {
+			return mIndexBuffer;
 		}
 		
-		public void setVertexBuffer(ShortBuffer vertexBuffer) {
-			mVertexBuffer = vertexBuffer;
+		public void setIndexBuffer(ShortBuffer vertexBuffer) {
+			mIndexBuffer = vertexBuffer;
 		}
 		
 		public short[] getPositionIndices() {

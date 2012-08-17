@@ -17,8 +17,11 @@ import javax.microedition.khronos.opengles.GL10;
 
 import android.app.Activity;
 import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.opengl.GLUtils;
 import android.opengl.Matrix;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
@@ -203,11 +206,11 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
     	
     	HashMap<String, Vertex> vertexMap = new LinkedHashMap<String, Vertex>();
     	
+		short index = 0;
+    	
     	for (TriangleData data : mesh.getTriangleData()) {
     		
     		ArrayList<Short> indexList = new ArrayList<Short>();
-    		
-    		short index = 0;
     		
     		for (int i = 0; i < data.getPositionIndices().length; i++) {
     			
@@ -246,9 +249,9 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
     		}
     		
     		indexBuffer.position(0);
-    		data.setVertexBuffer(indexBuffer);
+    		data.setIndexBuffer(indexBuffer);
     		
-    		Log.d("MainTest", "Capacity: " + data.getVertexBuffer().capacity());
+    		Log.d("MainTest", "Capacity: " + data.getIndexBuffer().capacity());
     	}
     	
     	Log.d("MainTest", "HashMapSize: " + vertexMap.size());
@@ -292,30 +295,6 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
     	mesh.getFloatData().setPositionBuffer(positionBuffer);
     	mesh.getFloatData().setNormalBuffer(normalBuffer);
     	mesh.getFloatData().setTextureCoordBuffer(texCoordBuffer);
-    	
-    	Log.d("MainTest", "Position Capacity: " + mesh.getFloatData().getPositionBuffer().capacity());
-    	Log.d("MainTest", "Normal Capacity: " + mesh.getFloatData().getNormalBuffer().capacity());
-    	Log.d("MainTest", "TexCoord Capacity: " + mesh.getFloatData().getTextureCoordBuffer().capacity());
-    	
-//    	ByteBuffer bb = ByteBuffer.allocateDirect(vertexBuffer.capacity() * 4);
-//		bb.order(ByteOrder.nativeOrder());
-//		newNormalBuffer = bb.asFloatBuffer();
-//    	
-//		for (TriangleData data : mesh.getTriangleData()) {
-//					
-//			for (int i = 0; i < data.getNormalIndiceBuffer().capacity(); i++) {
-//				
-//				short indexVertex = data.getVertexIndiceBuffer().get(i);
-//	
-//				short indexNormal = data.getNormalIndiceBuffer().get(i);
-//				
-//				newNormalBuffer.put((indexVertex * 3) + 0, normalBuffer.get((indexNormal * 3) + 0));
-//				newNormalBuffer.put((indexVertex * 3) + 1, normalBuffer.get((indexNormal * 3) + 1));
-//				newNormalBuffer.put((indexVertex * 3) + 2, normalBuffer.get((indexNormal * 3) + 2));
-//			}
-//		}
-//		
-//		newNormalBuffer.position(0);
     }
     
     private char[] readChar(DataInputStream stream) throws IOException {
@@ -360,6 +339,9 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
     	private int mProgram;
     	private int mPositionHandle;
     	private int mNormalHandle;
+    	private int mTextureUniformHandle;
+    	private int mTextureCoordinateHandle;
+    	private int mTextureDataHandle;
     	private int mColorHandle;
     	private int mMVPMatrixHandle;
     	private int mMVMatrixHandle;
@@ -367,7 +349,7 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
     	private int mVertices[] = new int[1];
     	private int mIndices[] = new int[mesh.getTriangleData().size()];
     	private int mNormals[] = new int[1];
-    	private int mNormalIndices[] = new int[mesh.getTriangleData().size()];
+    	private int mTexCoords[] = new int[1];
     	float mAngleX = 0.0f;
     	float mAngleY = -90.0f;
     	
@@ -428,6 +410,10 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 			GLES20.glUniform4fv(mColorHandle, 1, new float[] {1.0f, 0.0f, 0,0f, 0.0f}, 0);
 			
 			GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
+			
+			GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+			GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureDataHandle);
+			GLES20.glUniform1i(mTextureUniformHandle, 0);
 		    
 		    GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVertices[0]);
 		    GLES20Fix.glVertexAttribPointer(mPositionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, vertexStride, 0);
@@ -436,17 +422,18 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 		    GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mNormals[0]);
 		    GLES20Fix.glVertexAttribPointer(mNormalHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, vertexStride, 0);
 		    GLES20.glEnableVertexAttribArray(mNormalHandle);
-
+		    
+		    GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mTexCoords[0]);
+		    GLES20Fix.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false, 4 * 2, 0);
+		    GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
+		    
 		    for (int i = 0; i < mIndices.length; i++) {
 		    	GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mIndices[i]);
-		    	GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mNormalIndices[i]);
-		    	GLES20Fix.glDrawElements(GLES20.GL_TRIANGLES, mesh.getTriangleData().get(i).getVertexBuffer().capacity(), GLES20.GL_UNSIGNED_SHORT, 0);
+		    	GLES20Fix.glDrawElements(GLES20.GL_TRIANGLES, mesh.getTriangleData().get(i).getIndexBuffer().capacity(), GLES20.GL_UNSIGNED_SHORT, 0);
 		    	
 				GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
 		    }
-	    	
-		    //GLES20.glDrawArrays(GLES20.GL_POINTS, 0, vertexBuffer.capacity());
-		
+	    			
 		    GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
 			GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
 		}
@@ -485,7 +472,7 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 			GLES20.glGenBuffers(mVertices.length, mVertices, 0);
 			GLES20.glGenBuffers(mIndices.length, mIndices, 0);
 			GLES20.glGenBuffers(mNormals.length, mNormals, 0);
-			GLES20.glGenBuffers(mNormalIndices.length, mNormalIndices, 0);
+			GLES20.glGenBuffers(mTexCoords.length, mTexCoords, 0);
 			
 			GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVertices[0]);
 			GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mesh.getFloatData().getPositionBuffer().capacity() * 4, mesh.getFloatData().getPositionBuffer(), GLES20.GL_STATIC_DRAW);
@@ -493,13 +480,16 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 			GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mNormals[0]);
 			GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mesh.getFloatData().getNormalBuffer().capacity() * 4, mesh.getFloatData().getNormalBuffer(), GLES20.GL_STATIC_DRAW);
 			
+			GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mTexCoords[0]);
+			GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mesh.getFloatData().getTextureCoordBuffer().capacity() * 4, mesh.getFloatData().getTextureCoordBuffer(), GLES20.GL_STATIC_DRAW);
+			
 //			Log.d("Test", "VertexBuffer Capacity: " + vertexBuffer.capacity() + " NormalBuffer Capacity: " + newNormalBuffer.capacity());
 			
 			int i = 0;
 			
 			for (TriangleData data : mesh.getTriangleData()) {
 				GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mIndices[i]);
-				GLES20.glBufferData(GLES20.GL_ELEMENT_ARRAY_BUFFER, data.getVertexBuffer().capacity() * 2, data.getVertexBuffer(), GLES20.GL_STATIC_DRAW);
+				GLES20.glBufferData(GLES20.GL_ELEMENT_ARRAY_BUFFER, data.getIndexBuffer().capacity() * 2, data.getIndexBuffer(), GLES20.GL_STATIC_DRAW);
 				i++;
 			}
 			
@@ -514,9 +504,39 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 			mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
 			mMVMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVMatrix");
 			mLightPosHandle = GLES20.glGetUniformLocation(mProgram, "uLightPos");
+			mTextureUniformHandle = GLES20.glGetUniformLocation(mProgram, "uTexture");
+			mTextureCoordinateHandle = GLES20.glGetAttribLocation(mProgram, "aTexCoord");
+			
+			mTextureDataHandle = loadTexture();
 			
 			Matrix.setIdentityM(mAccumulatedRotationMatrix, 0);
 		}
     	
+		private int loadTexture() {
+			final int[] textureHandle = new int[1];
+			
+			GLES20.glGenTextures(1, textureHandle, 0);
+			
+			if (textureHandle[0] != 0) {
+				final BitmapFactory.Options options = new BitmapFactory.Options();
+				options.inScaled = false;
+				
+				final Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.raw.boy_10, options);
+				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0]);
+				
+				GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+				GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
+				
+				GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
+				
+				bitmap.recycle();
+			}
+			
+			if (textureHandle[0] == 0) {
+				throw new RuntimeException("Error loading texture");
+			}
+			
+			return textureHandle[0];
+		}
     }
 }
