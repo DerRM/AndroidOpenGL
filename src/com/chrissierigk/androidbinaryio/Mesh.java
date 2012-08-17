@@ -141,16 +141,16 @@ public class Mesh {
 	
 	public static class FloatData {
 
-		private FloatBuffer mVertexBuffer;
+		private FloatBuffer mPositionBuffer;
 		private FloatBuffer mNormalBuffer;
 		private FloatBuffer mTextureCoordBuffer;
 		
-		public FloatBuffer getVertexBuffer() {
-			return mVertexBuffer;
+		public FloatBuffer getPositionBuffer() {
+			return mPositionBuffer;
 		}
 
-		public void setVertexBuffer(FloatBuffer vertexBuffer) {
-			mVertexBuffer = vertexBuffer;
+		public void setPositionBuffer(FloatBuffer vertexBuffer) {
+			mPositionBuffer = vertexBuffer;
 		}
 		
 		public FloatBuffer getNormalBuffer() {
@@ -170,6 +170,47 @@ public class Mesh {
 		}
 		
 		public static class Vertex {
+			
+			private short mIndex;
+			
+			private short mPositionIndex;
+			private short mNormalIndex;
+			private short mTexCoordIndex;
+			
+			public short getIndex() {
+				return mIndex;
+			}
+			
+			public void setIndex(short index) {
+				mIndex = index;
+			}
+			
+			public short getPositionIndex() {
+				return mPositionIndex;
+			}
+			
+			public void setPositionIndex(short positionIndex) {
+				mPositionIndex = positionIndex;
+			}
+			
+			public short getNormalIndex() {
+				return mNormalIndex;
+			}
+			
+			public void setNormalIndex(short normalIndex) {
+				mNormalIndex = normalIndex;
+			}
+			
+			public short getTexCoordIndex() {
+				return mTexCoordIndex;
+			}
+			
+			public void setTexCoordIndex(short texCoordIndex) {
+				mTexCoordIndex = texCoordIndex;
+			}
+		}
+		
+		public static class Position {
 			
 			private float mX;
 			private float mY;
@@ -303,32 +344,42 @@ public class Mesh {
 	
 	public static class TriangleData {
 		
-		private ShortBuffer mVertexIndiceBuffer;
-		private ShortBuffer mNormalIndiceBuffer;
-		private ShortBuffer mTextureIndiceBuffer;
+		private ShortBuffer mVertexBuffer;
 		
-		public ShortBuffer getVertexIndiceBuffer() {
-			return mVertexIndiceBuffer;
+		private short[] mPositionIndices;
+		private short[] mNormalIndices;
+		private short[] mTextureIndices;
+		
+		public ShortBuffer getVertexBuffer() {
+			return mVertexBuffer;
 		}
 		
-		public void setVertexIndiceBuffer(ShortBuffer vertexIndiceBuffer) {
-			mVertexIndiceBuffer = vertexIndiceBuffer;
+		public void setVertexBuffer(ShortBuffer vertexBuffer) {
+			mVertexBuffer = vertexBuffer;
 		}
 		
-		public ShortBuffer getNormalIndiceBuffer() {
-			return mNormalIndiceBuffer;
+		public short[] getPositionIndices() {
+			return mPositionIndices;
 		}
 		
-		public void setNormalIndiceBuffer(ShortBuffer normalIndiceBuffer) {
-			mNormalIndiceBuffer = normalIndiceBuffer;
+		public void setPositionIndices(short[] positionIndiceBuffer) {
+			mPositionIndices = positionIndiceBuffer;
 		}
 		
-		public ShortBuffer getTextureIndiceBuffer() {
-			return mTextureIndiceBuffer;
+		public short[] getNormalIndices() {
+			return mNormalIndices;
 		}
 		
-		public void setTextureIndiceBuffer(ShortBuffer textureIndiceBuffer) {
-			mTextureIndiceBuffer = textureIndiceBuffer;
+		public void setNormalIndices(short[] normalIndiceBuffer) {
+			mNormalIndices = normalIndiceBuffer;
+		}
+		
+		public short[] getTextureIndices() {
+			return mTextureIndices;
+		}
+		
+		public void setTextureIndices(short[] textureIndiceBuffer) {
+			mTextureIndices = textureIndiceBuffer;
 		}
 	}
 }

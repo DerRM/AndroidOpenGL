@@ -7,6 +7,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -23,8 +27,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
 
-import com.chrissierigk.androidbinaryio.Mesh.FloatData.Normal;
-import com.chrissierigk.androidbinaryio.Mesh.FloatData.TexCoord;
 import com.chrissierigk.androidbinaryio.Mesh.FloatData.Vertex;
 import com.chrissierigk.androidbinaryio.Mesh.TriangleData;
 
@@ -32,13 +34,15 @@ public class MainActivity extends Activity {
 
 	private GLSurfaceView mGlSurfaceView;
 	private Mesh mesh;
-	private FloatBuffer vertexBuffer;
-	private FloatBuffer normalBuffer;
-	private FloatBuffer newNormalBuffer;
-	private FloatBuffer textureCoordBuffer;
-	private ShortBuffer vertexIndiceBuffer;
-	private ShortBuffer normalIndiceBuffer;
-	private ShortBuffer textureIndiceBuffer;
+
+	private float[] positionArray;
+	private float[] normalArray;
+	private float[] texCoordArray;
+	
+	private short[] positionIndices;
+	private short[] normalIndices;
+	private short[] texCoordIndices;
+	
 	private float mPreviousX = 0;
 	private float mPreviousY = 0;
 	private GLRenderer mRenderer;
@@ -83,59 +87,37 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 			mesh.getGeometryHeader().setDataOffset(readInt(input));
 			
 			int verticesCount = readInt(input) / 3;
-			ByteBuffer bb1 = ByteBuffer.allocateDirect(verticesCount * 3 * 4);
-			bb1.order(ByteOrder.nativeOrder());
-			vertexBuffer = bb1.asFloatBuffer();
+			positionArray = new float[verticesCount * 3];
+
 			
 			Log.d("MainTest", "Vertices Count: " + verticesCount);
 			
 			for (int i = 0; i < verticesCount; i++) {
-				Vertex vertex = new Vertex();
-				vertex.setX(readFloat(input));
-				vertex.setY(readFloat(input));
-				vertex.setZ(readFloat(input));
-				vertexBuffer.put(vertex.toArray());
+				positionArray[i * 3] = readFloat(input);
+				positionArray[(i * 3) + 1] = readFloat(input);
+				positionArray[(i * 3) + 2] = readFloat(input);
 			}
-			
-			vertexBuffer.position(0);
-			mesh.getFloatData().setVertexBuffer(vertexBuffer);
-			
+						
 			int normalCount = readInt(input) / 3;
-			ByteBuffer bb2 = ByteBuffer.allocateDirect(normalCount * 3 * 4);
-			bb2.order(ByteOrder.nativeOrder());
-			normalBuffer = bb2.asFloatBuffer();
-			
+			normalArray = new float[normalCount * 3];
+
 			Log.d("MainTest", "Normals Count: " + normalCount);
 			
 			for (int i = 0; i < normalCount; i++) {
-				Normal normal = new Normal();
-				normal.setX(readFloat(input));
-				normal.setY(readFloat(input));
-				normal.setZ(readFloat(input));
-				normalBuffer.put(normal.toArray());
+				normalArray[i * 3] = readFloat(input);
+				normalArray[(i * 3) + 1] = readFloat(input);
+				normalArray[(i * 3) + 2] = readFloat(input);
 			}
 			
-			normalBuffer.position(0);
-			mesh.getFloatData().setNormalBuffer(normalBuffer);
-			
 			int textureCoordCount = readInt(input);
-			ByteBuffer bb3 = ByteBuffer.allocateDirect(textureCoordCount * 2 * 4);
-			bb3.order(ByteOrder.nativeOrder());
-			textureCoordBuffer = bb3.asFloatBuffer();
-			
+			texCoordArray = new float[textureCoordCount * 2];
+
 			Log.d("MainTest", "TexCoord Count: " + textureCoordCount);
 			
 			for (int i = 0; i < textureCoordCount; i++) {
-				TexCoord texCoord = new TexCoord();
-				texCoord.setU(readFloat(input));
-				Log.d("MainTest", "U: " + texCoord.getU());
-				texCoord.setV(readFloat(input));
-				Log.d("MainTest", "V: " + texCoord.getV());
-				textureCoordBuffer.put(texCoord.toArray());
+				texCoordArray[i * 2] = readFloat(input);
+				texCoordArray[(i * 2) + 1] = readFloat(input);
 			}
-			
-			textureCoordBuffer.position(0);
-			mesh.getFloatData().setTextureCoordBuffer(textureCoordBuffer);
 			
 			for (int triangleGroups = 0; triangleGroups < mesh.getGeometryHeader().getNoOfTriangleGroups(); triangleGroups++) {
 			
@@ -143,46 +125,34 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 				
 				Log.d("MainTest", "Triangle Group " + triangleGroups + " Count: " + length);
 				
-				ByteBuffer iBuffer = ByteBuffer.allocateDirect(length * 3 * 2);
-				iBuffer.order(ByteOrder.nativeOrder());
-				vertexIndiceBuffer = iBuffer.asShortBuffer();
+				positionIndices = new short[length * 3];
+				normalIndices = new short[length * 3];
+				texCoordIndices = new short[length * 3];
 				
-				ByteBuffer nBuffer = ByteBuffer.allocateDirect(length * 3 * 2);
-				nBuffer.order(ByteOrder.nativeOrder());
-				normalIndiceBuffer = nBuffer.asShortBuffer();
+				for (int i = 0; i < length; i++) {					
+					positionIndices[i * 3] = readShort(input);
+					positionIndices[(i * 3) + 1] = readShort(input);
+					positionIndices[(i * 3) + 2] = readShort(input);
 				
-				ByteBuffer tBuffer = ByteBuffer.allocateDirect(length * 3 * 2);
-				tBuffer.order(ByteOrder.nativeOrder());
-				textureIndiceBuffer = tBuffer.asShortBuffer();
-				
-				for (int i = 0; i < length * 9; i += 9) {					
-					vertexIndiceBuffer.put(readShort(input));
-					vertexIndiceBuffer.put(readShort(input));
-					vertexIndiceBuffer.put(readShort(input));
-				
-					normalIndiceBuffer.put(readShort(input));
-					normalIndiceBuffer.put(readShort(input));
-					normalIndiceBuffer.put(readShort(input));
+					normalIndices[i * 3] = readShort(input);
+					normalIndices[(i * 3) + 1] = readShort(input);
+					normalIndices[(i * 3) + 2] = readShort(input);
 					
-					textureIndiceBuffer.put(readShort(input));
-					textureIndiceBuffer.put(readShort(input));
-					textureIndiceBuffer.put(readShort(input));
+					texCoordIndices[i * 3] = readShort(input);
+					texCoordIndices[(i * 3) + 1] = readShort(input);
+					texCoordIndices[(i * 3) + 2] = readShort(input);
 				}
-				
-				vertexIndiceBuffer.position(0);
-				normalIndiceBuffer.position(0);
-				textureIndiceBuffer.position(0);
-				
+								
 				TriangleData triangleData = new TriangleData();
-				triangleData.setVertexIndiceBuffer(vertexIndiceBuffer);
-				triangleData.setNormalIndiceBuffer(normalIndiceBuffer);
-				triangleData.setTextureIndiceBuffer(textureIndiceBuffer);
+				triangleData.setPositionIndices(positionIndices);
+				triangleData.setNormalIndices(normalIndices);
+				triangleData.setTextureIndices(texCoordIndices);
 				mesh.getTriangleData().add(triangleData);
 			}
 			
-			rearrangeNormals();
+			rearrangeIndices();
 			
-			Log.d("MainTest", readInt(input) + "");
+			//Log.d("MainTest", readInt(input) + "");
 			
 			Log.d("MainTest", mesh.toString());
 		} catch (IOException e) {
@@ -229,27 +199,123 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
         setContentView(mGlSurfaceView);
     }
     
-    private void rearrangeNormals() {
+    private void rearrangeIndices() {
     	
-    	ByteBuffer bb = ByteBuffer.allocateDirect(vertexBuffer.capacity() * 4);
-		bb.order(ByteOrder.nativeOrder());
-		newNormalBuffer = bb.asFloatBuffer();
+    	HashMap<String, Vertex> vertexMap = new LinkedHashMap<String, Vertex>();
     	
-		for (TriangleData data : mesh.getTriangleData()) {
-					
-			for (int i = 0; i < data.getNormalIndiceBuffer().capacity(); i++) {
-				
-				short indexVertex = data.getVertexIndiceBuffer().get(i);
-	
-				short indexNormal = data.getNormalIndiceBuffer().get(i);
-				
-				newNormalBuffer.put((indexVertex * 3) + 0, normalBuffer.get((indexNormal * 3) + 0));
-				newNormalBuffer.put((indexVertex * 3) + 1, normalBuffer.get((indexNormal * 3) + 1));
-				newNormalBuffer.put((indexVertex * 3) + 2, normalBuffer.get((indexNormal * 3) + 2));
-			}
+    	for (TriangleData data : mesh.getTriangleData()) {
+    		
+    		ArrayList<Short> indexList = new ArrayList<Short>();
+    		
+    		short index = 0;
+    		
+    		for (int i = 0; i < data.getPositionIndices().length; i++) {
+    			
+    			short positionIndex = data.getPositionIndices()[i];
+    			short normalIndex = data.getNormalIndices()[i];
+    			short texCoordIndex = data.getTextureIndices()[i];
+    			
+    			String key =  positionIndex + "." + normalIndex + "." + texCoordIndex;
+    			
+    			if (!vertexMap.containsKey(key)) {
+    				    				
+    				Vertex vertex = new Vertex();
+    				vertex.setIndex(index);
+    				vertex.setPositionIndex(positionIndex);
+    				vertex.setNormalIndex(normalIndex);
+    				vertex.setTexCoordIndex(texCoordIndex);
+    				vertexMap.put(key, vertex);
+    				
+    				indexList.add(index);
+    				
+    				index++;
+    			} else {
+    				Vertex vertex = vertexMap.get(key);
+    				indexList.add(vertex.getIndex());
+    			}
+    		}
+    		
+    		ByteBuffer bb = ByteBuffer.allocateDirect(indexList.size() * 2);
+    		bb.order(ByteOrder.nativeOrder());
+    		ShortBuffer indexBuffer = bb.asShortBuffer();
+    		
+    		Iterator<Short> iter = indexList.iterator();
+    		
+    		for (int i = 0; i < indexList.size(); i++) {
+    			indexBuffer.put(iter.next().shortValue());
+    		}
+    		
+    		indexBuffer.position(0);
+    		data.setVertexBuffer(indexBuffer);
+    		
+    		Log.d("MainTest", "Capacity: " + data.getVertexBuffer().capacity());
+    	}
+    	
+    	Log.d("MainTest", "HashMapSize: " + vertexMap.size());
+    	
+    	ByteBuffer bb = ByteBuffer.allocateDirect(vertexMap.size() * 3 * 4);
+    	bb.order(ByteOrder.nativeOrder());
+    	FloatBuffer positionBuffer = bb.asFloatBuffer();
+    	
+    	ByteBuffer bb1 = ByteBuffer.allocateDirect(vertexMap.size() * 3 * 4);
+    	bb1.order(ByteOrder.nativeOrder());
+    	FloatBuffer normalBuffer = bb1.asFloatBuffer();
+    	
+    	ByteBuffer bb2 = ByteBuffer.allocateDirect(vertexMap.size() * 2 * 4);
+    	bb2.order(ByteOrder.nativeOrder());
+    	FloatBuffer texCoordBuffer = bb2.asFloatBuffer();
+    	
+    	for (String key : vertexMap.keySet()) {
+    		
+    		Vertex vertex = vertexMap.get(key);
+    		
+    		short positionIndex = vertex.getPositionIndex();
+    		short normalIndex = vertex.getNormalIndex();
+    		short texCoordIndex = vertex.getTexCoordIndex();
+    		
+    		positionBuffer.put(positionArray[positionIndex * 3]);
+    		positionBuffer.put(positionArray[(positionIndex * 3) + 1]);
+    		positionBuffer.put(positionArray[(positionIndex * 3) + 2]);
+    		
+    		normalBuffer.put(normalArray[normalIndex * 3]);
+    		normalBuffer.put(normalArray[(normalIndex * 3) + 1]);
+    		normalBuffer.put(normalArray[(normalIndex * 3) + 2]);
+    		
+    		texCoordBuffer.put(texCoordArray[texCoordIndex * 2]);
+    		texCoordBuffer.put(texCoordArray[(texCoordIndex * 2) + 1]);
 		}
-		
-		newNormalBuffer.position(0);
+    	
+    	positionBuffer.position(0);
+    	normalBuffer.position(0);
+    	texCoordBuffer.position(0);
+    	
+    	mesh.getFloatData().setPositionBuffer(positionBuffer);
+    	mesh.getFloatData().setNormalBuffer(normalBuffer);
+    	mesh.getFloatData().setTextureCoordBuffer(texCoordBuffer);
+    	
+    	Log.d("MainTest", "Position Capacity: " + mesh.getFloatData().getPositionBuffer().capacity());
+    	Log.d("MainTest", "Normal Capacity: " + mesh.getFloatData().getNormalBuffer().capacity());
+    	Log.d("MainTest", "TexCoord Capacity: " + mesh.getFloatData().getTextureCoordBuffer().capacity());
+    	
+//    	ByteBuffer bb = ByteBuffer.allocateDirect(vertexBuffer.capacity() * 4);
+//		bb.order(ByteOrder.nativeOrder());
+//		newNormalBuffer = bb.asFloatBuffer();
+//    	
+//		for (TriangleData data : mesh.getTriangleData()) {
+//					
+//			for (int i = 0; i < data.getNormalIndiceBuffer().capacity(); i++) {
+//				
+//				short indexVertex = data.getVertexIndiceBuffer().get(i);
+//	
+//				short indexNormal = data.getNormalIndiceBuffer().get(i);
+//				
+//				newNormalBuffer.put((indexVertex * 3) + 0, normalBuffer.get((indexNormal * 3) + 0));
+//				newNormalBuffer.put((indexVertex * 3) + 1, normalBuffer.get((indexNormal * 3) + 1));
+//				newNormalBuffer.put((indexVertex * 3) + 2, normalBuffer.get((indexNormal * 3) + 2));
+//			}
+//		}
+//		
+//		newNormalBuffer.position(0);
     }
     
     private char[] readChar(DataInputStream stream) throws IOException {
@@ -373,8 +439,8 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 
 		    for (int i = 0; i < mIndices.length; i++) {
 		    	GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mIndices[i]);
-		    	//GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mNormalIndices[i]);
-		    	GLES20Fix.glDrawElements(GLES20.GL_TRIANGLES, mesh.getTriangleData().get(i).getVertexIndiceBuffer().capacity(), GLES20.GL_UNSIGNED_SHORT, 0);
+		    	GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mNormalIndices[i]);
+		    	GLES20Fix.glDrawElements(GLES20.GL_TRIANGLES, mesh.getTriangleData().get(i).getVertexBuffer().capacity(), GLES20.GL_UNSIGNED_SHORT, 0);
 		    	
 				GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
 		    }
@@ -422,18 +488,18 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 			GLES20.glGenBuffers(mNormalIndices.length, mNormalIndices, 0);
 			
 			GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVertices[0]);
-			GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, vertexBuffer.capacity() * 4, vertexBuffer, GLES20.GL_STATIC_DRAW);
+			GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mesh.getFloatData().getPositionBuffer().capacity() * 4, mesh.getFloatData().getPositionBuffer(), GLES20.GL_STATIC_DRAW);
 			
 			GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mNormals[0]);
-			GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, newNormalBuffer.capacity() * 4, newNormalBuffer, GLES20.GL_STATIC_DRAW);
+			GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mesh.getFloatData().getNormalBuffer().capacity() * 4, mesh.getFloatData().getNormalBuffer(), GLES20.GL_STATIC_DRAW);
 			
-			Log.d("Test", "VertexBuffer Capacity: " + vertexBuffer.capacity() + " NormalBuffer Capacity: " + newNormalBuffer.capacity());
+//			Log.d("Test", "VertexBuffer Capacity: " + vertexBuffer.capacity() + " NormalBuffer Capacity: " + newNormalBuffer.capacity());
 			
 			int i = 0;
 			
 			for (TriangleData data : mesh.getTriangleData()) {
 				GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mIndices[i]);
-				GLES20.glBufferData(GLES20.GL_ELEMENT_ARRAY_BUFFER, data.getVertexIndiceBuffer().capacity() * 2, data.getVertexIndiceBuffer(), GLES20.GL_STATIC_DRAW);
+				GLES20.glBufferData(GLES20.GL_ELEMENT_ARRAY_BUFFER, data.getVertexBuffer().capacity() * 2, data.getVertexBuffer(), GLES20.GL_STATIC_DRAW);
 				i++;
 			}
 			
