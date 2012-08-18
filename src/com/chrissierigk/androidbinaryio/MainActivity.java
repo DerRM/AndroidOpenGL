@@ -33,7 +33,7 @@ import android.view.View.OnTouchListener;
 import com.chrissierigk.androidbinaryio.Mesh.FloatData.Vertex;
 import com.chrissierigk.androidbinaryio.Mesh.TriangleData;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements OnTouchListener {
 
 	private GLSurfaceView mGlSurfaceView;
 	private Mesh mesh;
@@ -50,20 +50,7 @@ public class MainActivity extends Activity {
 	private float mPreviousY = 0;
 	private GLRenderer mRenderer;
 	private float mDensity;
-	
-	/**
-	 * TODO:
-
-For each input vertex
-    Try to find a similar ( = same for all attributes ) vertex between all those we already output
-    If found :
-        A similar vertex is already in the VBO, use it instead !
-    If not found :
-        No similar vertex found, add it to the VBO
-
-http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
-	 */
-	
+		
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -75,12 +62,55 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         mDensity = displayMetrics.density;
         
-        try {
+        loadModel();
+        
+        mRenderer = new GLRenderer();
+        mGlSurfaceView.setRenderer(mRenderer);
+        mGlSurfaceView.setOnTouchListener(this);
+        
+        setContentView(mGlSurfaceView);
+    }
+    
+	@Override
+	public boolean onTouch(View v, MotionEvent event) {
+		float x = event.getX();
+		float y = event.getY();
+		
+		switch (event.getAction()) {
+		case MotionEvent.ACTION_MOVE:
+			
+			float dx = x - mPreviousX;
+			float dy = y - mPreviousY;
+			
+			if (y > v.getHeight() / 2) {
+				dx = dx * -1;
+			}
+			
+			if (x < v.getWidth() / 2) {
+				dy = dy * -1;
+			}
+			
+			mRenderer.mAngleX += dx / mDensity / 2f;
+			mRenderer.mAngleY += dy / mDensity / 2f;
+			((GLSurfaceView) v).requestRender();
+			
+			break;
+		}
+		
+		mPreviousX = x;
+		mPreviousY = y;
+		
+		return true;
+	}
+
+	private void loadModel() {
+		
+		try {
         	mesh = new Mesh();
 			InputStream is = getResources().openRawResource(R.raw.test);
 			DataInputStream input = new DataInputStream(is);
 			
-			mesh.setMagicNumber(readChar(input));
+			mesh.setMagicNumber(readCharArray(input, 4));
 			mesh.setVersionNumber(readInt(input));
 			mesh.setChunkId(readInt(input));
 			mesh.setNoOfSubChunks(readInt(input));
@@ -91,7 +121,6 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 			
 			int verticesCount = readInt(input) / 3;
 			positionArray = new float[verticesCount * 3];
-
 			
 			Log.d("MainTest", "Vertices Count: " + verticesCount);
 			
@@ -154,54 +183,23 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 			}
 			
 			rearrangeIndices();
-			
-			//Log.d("MainTest", readInt(input) + "");
-			
-			Log.d("MainTest", mesh.toString());
+						
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-        
-        mRenderer = new GLRenderer();
-        mGlSurfaceView.setRenderer(mRenderer);
-        mGlSurfaceView.setOnTouchListener(new OnTouchListener() {
-			
-			@Override
-			public boolean onTouch(View v, MotionEvent event) {
-				float x = event.getX();
-				float y = event.getY();
-				
-				switch (event.getAction()) {
-				case MotionEvent.ACTION_MOVE:
-					
-					float dx = x - mPreviousX;
-					float dy = y - mPreviousY;
-					
-					if (y > v.getHeight() / 2) {
-						dx = dx * -1;
-					}
-					
-					if (x < v.getWidth() / 2) {
-						dy = dy * -1;
-					}
-					
-					mRenderer.mAngleX += dx / mDensity / 2f;
-					mRenderer.mAngleY += dy / mDensity / 2f;
-					((GLSurfaceView) v).requestRender();
-					
-					break;
-				}
-				
-				mPreviousX = x;
-				mPreviousY = y;
-				
-				return true;
-			}
-		});
-        
-        setContentView(mGlSurfaceView);
-    }
+	}
     
+	/**
+	 * 
+	 * 	For each input vertex
+     *		Try to find a similar ( = same for all attributes ) vertex between all those we already output
+     *	If found :
+     *   	A similar vertex is already in the VBO, use it instead !
+     *	If not found :
+     *   	No similar vertex found, add it to the VBO
+	 *
+	 *	http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
+	 */
     private void rearrangeIndices() {
     	
     	HashMap<String, Vertex> vertexMap = new LinkedHashMap<String, Vertex>();
@@ -297,13 +295,13 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
     	mesh.getFloatData().setTextureCoordBuffer(texCoordBuffer);
     }
     
-    private char[] readChar(DataInputStream stream) throws IOException {
-    	byte[] buffer = new byte[4];
+    private char[] readCharArray(DataInputStream stream, int length) throws IOException {
+    	byte[] buffer = new byte[length];
     	stream.read(buffer);
     	
-    	char[] out = new char[buffer.length];
+    	char[] out = new char[length];
     	
-    	for (int i = 0; i < buffer.length; i++) {
+    	for (int i = 0; i < length; i++) {
     		out[i] = (char) (buffer[i] & 0xFF);
     	}
     	
@@ -365,7 +363,6 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
     	private float[] mTempMatrix = new float[16];
     	private float[] mModelMatrix = new float[16];
     	private float[] mLightModelMatrix = new float[16];	
-    	//private float[] mTranslationMatrix = new float[16];
     	
     	private static final int COORDS_PER_VERTEX = 3;
     	private final int vertexStride = COORDS_PER_VERTEX * 4;
@@ -482,9 +479,7 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 			
 			GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mTexCoords[0]);
 			GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mesh.getFloatData().getTextureCoordBuffer().capacity() * 4, mesh.getFloatData().getTextureCoordBuffer(), GLES20.GL_STATIC_DRAW);
-			
-//			Log.d("Test", "VertexBuffer Capacity: " + vertexBuffer.capacity() + " NormalBuffer Capacity: " + newNormalBuffer.capacity());
-			
+						
 			int i = 0;
 			
 			for (TriangleData data : mesh.getTriangleData()) {
@@ -492,9 +487,7 @@ http://code.google.com/p/opengl-tutorial-org/source/browse/common/vboindexer.cpp
 				GLES20.glBufferData(GLES20.GL_ELEMENT_ARRAY_BUFFER, data.getIndexBuffer().capacity() * 2, data.getIndexBuffer(), GLES20.GL_STATIC_DRAW);
 				i++;
 			}
-			
-			//Log.d("Test", mesh.getTriangleData().get(0).getVertexIndiceBuffer().capacity() + "");
-			
+						
 			GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
 			GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
 			
